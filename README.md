@@ -1,365 +1,178 @@
 # FlightAI Assistant
 
+FlightAI Assistant is a multimodal airline customer-support assistant built using OpenAI APIs and Gradio.
+
+<!-- ===================================================== -->
+<!-- INSERT SCREENSHOTS HERE -->
+<!-- ===================================================== -->
+
+
+### Login Interface
+
+![Chat Screenshot](screenshots/login.png)
+
+### Interface exam with tts and image genration
+
+![Tool Calling](screenshots/Interface.png)
+
+
+<!-- ===================================================== -->
+
 ## Overview
 
-FlightAI Assistant is a simple conversational airline chatbot built using:
+The application can:
 
-- Python
-- OpenAI API
-- Function Calling (Tools)
-- Gradio
-- sqllite3
+- Answer airline-related questions
+- Retrieve ticket prices through function calling
+- Store and retrieve ticket prices from SQLite
+- Generate destination-themed images
+- Generate spoken responses using OpenAI Text-to-Speech
+- Maintain conversational context
+- Provide an interactive Gradio interface
 
-The primary goal of this project was to learn how Large Language Models interact with external functions and how tool calling works internally.
+This project was built primarily to understand how Large Language Models interact with external tools and how multimodal AI applications are structured.
 
-The assistant can:
+---
 
-- Answer airline-related queries
-- Maintain conversation history
-- Detect when a user is asking for ticket prices
-- Call a Python function automatically
-- Return the function result as a natural language response
+## Features
+
+### Conversational Airline Assistant
+
+Uses OpenAI GPT models to answer user queries in a concise and helpful manner.
+
+### Function Calling
+
+The model can decide when ticket price information is required and automatically invoke Python functions.
+
+### SQLite Database
+
+Ticket prices are stored in a local SQLite database instead of hardcoded logic.
+
+### AI Image Generation
+
+When a destination is discussed, the assistant generates a travel-themed image using OpenAI's image generation model.
+
+### AI Voice Responses
+
+Assistant replies are converted into speech using OpenAI Text-to-Speech.
+
+### Gradio Interface
+
+A web-based interface combining:
+
+- Chat
+- Audio
+- Images
+
+into a single application.
+
+---
+
+# Architecture
+
+```text
+User
+ │
+ ▼
+Gradio Interface
+ │
+ ▼
+OpenAI GPT
+ │
+ ├──────────────┐
+ │              │
+ ▼              ▼
+Tool Calling    Normal Response
+ │
+ ▼
+SQLite Database
+ │
+ ▼
+Ticket Price
+ │
+ ▼
+GPT Response
+ │
+ ├───────────┐
+ │           │
+ ▼           ▼
+TTS       Image Generation
+ │           │
+ ▼           ▼
+Audio      Travel Poster
+ │           │
+ └─────► User ◄─────┘
+```
 
 ---
 
 # Learning Objectives
 
-This project was built to understand:
+This project was created to understand:
 
-1. How chat-based LLM applications are structured
-2. How OpenAI Function Calling works
-3. How conversation history is maintained
-4. How external tools can be connected to an LLM
-5. How Gradio can be used to build a quick user interface
+- OpenAI Chat Completions API
+- Tool Calling / Function Calling
+- Structured Tool Definitions
+- JSON Argument Parsing
+- SQLite Database Integration
+- Text-to-Speech APIs
+- Image Generation APIs
+- Gradio Event Chaining
+- Conversation Memory
+- Multi-Modal AI Applications
 
 ---
 
-# Project Architecture
+# Project Structure
 
 ```text
-User
-  |
-  v
-Gradio UI
-  |
-  v
-chat()
-  |
-  v
-OpenAI API
-  |
-  +------------------+
-  |                  |
-  | Tool Needed?     |
-  |                  |
-  +--------+---------+
-           |
-          Yes
-           |
-           v
-handle_tool_call()
-           |
-           v
-get_ticket_price()
-           |
-           v
-Tool Response
-           |
-           v
-OpenAI API
-           |
-           v
-Final Answer
+flight-ai/
+│
+├── flight_ai.ipynb
+├── prices.db
+├── .env
+├── screenshots/
+│
+├── chat.png
+├── tool-calling.png
+├── image.png
+└── audio.png
 ```
 
 ---
 
-# Project Components
+# Code Walkthrough
 
 ## 1. Environment Setup
 
 ```python
-from dotenv import load_dotenv
-from openai import OpenAI
-import os
+load_dotenv()
+openai = OpenAI()
 ```
 
 ### Purpose
 
-- Loads API keys securely
-- Creates an OpenAI client
-- Avoids hardcoding sensitive credentials
+Loads the API key from the environment and creates an OpenAI client.
 
 ---
 
 ## 2. System Prompt
 
 ```python
-system_message = "You are a helpful airline assistant"
+system_message = """
+You are a helpful assistant for an Airline called FlightAI.
+"""
 ```
 
 ### Purpose
 
-The system message defines the assistant's behavior.
+Defines the assistant's personality and behavior.
 
-Think of it as permanent instructions given to the model before every conversation.
-
-Example:
-
-```text
-You are a helpful airline assistant.
-```
-
-This influences tone, style, and behavior.
+The model receives these instructions before every conversation.
 
 ---
 
-## 3. Ticket Price Function
-
-```python
-def get_ticket_price(destination_city):
-```
-
-### Purpose
-
-This is a normal Python function.
-
-The LLM cannot access databases or APIs directly.
-
-Instead, it requests that this function be executed.
-
-Example:
-
-```python
-get_ticket_price("Tokyo")
-```
-
-Returns:
-
-```python
-"₹132314"
-```
-
----
-
-## 4. Tool Definition
-
-```python
-tools = [...]
-```
-
-### Purpose
-
-The model must know:
-
-- Function name
-- Parameters
-- Parameter types
-- Description
-
-Without this definition, the model cannot call the function.
-
-Think of it as a contract between the LLM and your Python code.
-
----
-
-## 5. Building Conversation History
-
-```python
-history = [
-    {
-        "role": h["role"],
-        "content": h["content"]
-    }
-    for h in history
-]
-```
-
-### Purpose
-
-Converts Gradio chat history into OpenAI message format.
-
-Example:
-
-```python
-[
-    {
-        "role": "user",
-        "content": "Hello"
-    }
-]
-```
-
----
-
-## 6. Building Messages
-
-```python
-messages = (
-    [{"role": "system", "content": system_message}]
-    + history
-    + [{"role": "user", "content": message}]
-)
-```
-
-### Purpose
-
-Creates the complete conversation sent to the model.
-
-Structure:
-
-```python
-[
-    system message,
-    previous messages,
-    current user message
-]
-```
-
-This allows the model to understand context.
-
----
-
-## 7. First OpenAI Request
-
-```python
-response = openai.chat.completions.create(
-    model=MODEL,
-    messages=messages,
-    tools=tools
-)
-```
-
-### Purpose
-
-Send:
-
-- Conversation
-- Available tools
-
-to the model.
-
-The model decides:
-
-- Answer directly
-- Call a tool
-
----
-
-## 8. Detecting Tool Calls
-
-```python
-if response.choices[0].finish_reason == "tool_calls":
-```
-
-### Purpose
-
-Checks whether the model wants to execute a function.
-
-Possible outcomes:
-
-```python
-"stop"
-```
-
-Normal response.
-
-or
-
-```python
-"tool_calls"
-```
-
-Function execution required.
-
----
-
-## 9. Tool Execution
-
-```python
-response = handle_tool_call(message)
-```
-
-### Purpose
-
-Runs the requested Python function.
-
-Example:
-
-Model requests:
-
-```python
-get_ticket_price("London")
-```
-
-Python executes:
-
-```python
-price = get_ticket_price("London")
-```
-
-Returns:
-
-```python
-"75513"
-```
-
----
-
-## 10. Parsing Arguments
-
-```python
-arguments = json.loads(
-    tool_call.function.arguments
-)
-```
-
-### Purpose
-
-Converts tool arguments from JSON text into a Python dictionary.
-
-Before:
-
-```python
-'{"destination_city":"London"}'
-```
-
-After:
-
-```python
-{
-    "destination_city": "London"
-}
-```
-
----
-
-## 11. Returning Tool Output
-
-```python
-response = {
-    "role": "tool",
-    "content": price_details,
-    "tool_call_id": tool_call.id
-}
-```
-
-### Purpose
-
-Sends function results back to the model.
-
-Example:
-
-```python
-{
-    "role": "tool",
-    "content": "75513"
-}
-```
-
----
-
-## 12. Second OpenAI Request
+## 3. Basic Chatbot
 
 ```python
 response = openai.chat.completions.create(
@@ -370,112 +183,295 @@ response = openai.chat.completions.create(
 
 ### Purpose
 
-The model now sees:
+Creates a simple conversational chatbot without tools.
 
-1. User question
-2. Tool request
-3. Tool result
-
-and generates the final natural language response.
-
-Example:
-
-```text
-The ticket price for London is ₹75,513.
-```
+This serves as the foundation for the rest of the project.
 
 ---
 
-## 13. Gradio Interface
+## 4. Streaming Responses
 
 ```python
-gr.ChatInterface(
-    fn=chat,
-    type="messages"
+stream = openai.chat.completions.create(
+    stream=True
 )
 ```
 
 ### Purpose
 
-Creates a browser-based chat application.
+Streams tokens as they are generated.
 
-Workflow:
-
-```text
-User
- ↓
-Gradio
- ↓
-chat()
- ↓
-OpenAI
- ↓
-Response
- ↓
-Gradio UI
-```
+Instead of waiting for the complete response, users see text appear gradually.
 
 ---
 
-# Example Tool Calling Flow
+## 5. Tool Function
 
-User:
-
-```text
-What is the ticket price to Tokyo?
+```python
+def get_ticket_price(city):
 ```
 
-Model:
+### Purpose
+
+Provides ticket price information for a destination.
+
+The LLM itself cannot access databases.
+
+It must request that Python executes this function.
+
+---
+
+## 6. Tool Definition
+
+```python
+price_function = {
+    ...
+}
+```
+
+### Purpose
+
+Describes:
+
+- Tool name
+- Parameters
+- Parameter types
+- Usage instructions
+
+This allows the model to understand how to call the function.
+
+---
+
+## 7. Tool Handler
+
+```python
+def handle_tool_call(message):
+```
+
+### Purpose
+
+Receives the tool request from the model and executes the corresponding Python function.
+
+Example:
 
 ```text
-Call get_ticket_price("Tokyo")
+Model:
+get_ticket_price("Tokyo")
 ```
 
 Python:
 
-```python
-get_ticket_price("Tokyo")
-```
-
-Returns:
-
 ```text
-132314
-```
-
-Model:
-
-```text
-The ticket price for Tokyo is ₹132,314.
+Ticket price to Tokyo is ...
 ```
 
 ---
 
-# Key Concepts Learned
+## 8. SQLite Integration
 
-- OpenAI Chat Completions API
-- Function Calling
-- Tool Definitions
-- JSON Parsing
-- Conversation Memory
-- System Prompts
-- Gradio Interfaces
-- LLM Orchestration
-- API Key Management
+```python
+sqlite3.connect(DB)
+```
+
+### Purpose
+
+Introduces persistent storage.
+
+Instead of storing prices inside dictionaries, ticket prices are saved in a database.
+
+### Database Table
+
+```sql
+CREATE TABLE prices (
+    city TEXT PRIMARY KEY,
+    price REAL
+);
+```
+
+---
+
+## 9. Database Tool
+
+```python
+SELECT price
+FROM prices
+WHERE city = ?
+```
+
+### Purpose
+
+Fetches destination prices directly from SQLite.
+
+This mimics how real-world applications retrieve data.
+
+---
+
+## 10. Image Generation
+
+```python
+openai.images.generate(...)
+```
+
+### Purpose
+
+Generates destination-themed artwork.
+
+Example:
+
+```text
+Paris
+```
+
+Produces:
+
+```text
+Vacation-style Paris travel artwork
+```
+
+---
+
+## 11. Text-to-Speech
+
+```python
+openai.audio.speech.create(...)
+```
+
+### Purpose
+
+Converts assistant replies into spoken audio.
+
+The user receives both:
+
+- Text response
+- Voice response
+
+---
+
+## 12. Multi-Tool Workflow
+
+```python
+handle_tool_calls_and_return_cities()
+```
+
+### Purpose
+
+Tracks destinations used during tool calls.
+
+The extracted city is later used for:
+
+- Database lookup
+- Image generation
+
+---
+
+## 13. Final Chat Pipeline
+
+```python
+User Question
+      │
+      ▼
+GPT
+      │
+      ▼
+Tool Call
+      │
+      ▼
+SQLite
+      │
+      ▼
+GPT Response
+      │
+      ├── Audio
+      │
+      └── Image
+```
+
+This is the core orchestration layer of the application.
+
+---
+
+## 14. Gradio Interface
+
+The final UI combines:
+
+- Chatbot
+- Image viewer
+- Audio player
+- Text input
+
+using Gradio Blocks.
+
+```python
+with gr.Blocks():
+```
+
+This creates a multimodal interface where a single user query can produce:
+
+- Text
+- Audio
+- Images
+
+simultaneously.
+
+---
+
+# Example Interaction
+
+### User
+
+```text
+What is the ticket price to Paris?
+```
+
+### Tool Call
+
+```python
+get_ticket_price("Paris")
+```
+
+### Database Response
+
+```text
+Ticket price to Paris is Rs. 84,964
+```
+
+### Assistant
+
+```text
+The current ticket price to Paris is Rs. 84,964.
+```
+
+### Additional Outputs
+
+- Voice narration of the response
+- AI-generated Paris travel artwork
+
+---
+
+# Technologies Used
+
+- Python
+- OpenAI API
+- GPT-4.1 Mini
+- GPT Image Generation
+- GPT-4o Mini TTS
+- SQLite
+- Gradio
+- dotenv
 
 ---
 
 # Future Improvements
 
-- Real airline APIs
-- Flight search
-- Flight booking
-- User authentication
-- Flight status tracking
-- Database integration
-- Multi-tool support
-- Streaming responses
-- Error handling for invalid destinations
+- Real flight APIs
+- Flight booking workflows
+- Flight cancellation support
+- Passenger profiles
+- Authentication
+- Travel recommendations
+- Hotel suggestions
+- Multi-city itinerary planning
+- RAG-based travel knowledge base
 
 ---
 
@@ -483,4 +479,10 @@ The ticket price for Tokyo is ₹132,314.
 
 Shivam Gautam
 
-Built as a learning project to understand OpenAI Function Calling and conversational AI application development.
+Built as a learning project while exploring:
+
+- OpenAI Function Calling
+- Tool Orchestration
+- Multimodal AI
+- SQLite Integration
+- Gradio Applications
